@@ -179,22 +179,19 @@
 
         // Parçacıkları Çiz
         particles.forEach(p => {
-            // 3D Dönüş (Rotation)
             let rotationY = time * speedMultiplier + p.theta;
             let rotationX = (time * 0.5) * speedMultiplier;
 
-            // 3D'den 2D'ye izdüşüm matematiği
             let x = Math.sin(p.phi) * Math.cos(rotationY);
             let y = Math.sin(p.phi) * Math.sin(rotationY) * Math.sin(rotationX) + Math.cos(p.phi) * Math.cos(rotationX);
             let z = Math.sin(p.phi) * Math.sin(rotationY) * Math.cos(rotationX) - Math.cos(p.phi) * Math.sin(rotationX);
 
             let radius = 45 * scale; 
-            let projectScale = 150 / (150 + z * radius); // Perspektif
+            let projectScale = 150 / (150 + z * radius);
             
             let drawX = x * radius * projectScale;
             let drawY = y * radius * projectScale;
 
-            // Arka plandaki parçacıklar daha silik olsun
             let opacity = Math.max(0.1, z + 0.5);
 
             ctx.beginPath();
@@ -240,7 +237,6 @@
             };
 
             recognition.onend = () => {
-                // Konuşma tanıma bittiğinde (eğer düşünmüyorsa) idle'a dön
                 if (auraState === 'listening') stopListening();
             };
         } else {
@@ -260,7 +256,7 @@
                 alert("Lütfen önce Groq API anahtarınızı girin!");
                 return;
             }
-            window.speechSynthesis.cancel(); // Konuşuyorsa sus
+            window.speechSynthesis.cancel(); 
             recognition.start();
             isListening = true;
         } else {
@@ -281,6 +277,7 @@
         document.getElementById("statusText").innerText = text;
     }
 
+    // Groq API İsteği (Gelişmiş Hata Ayıklama ile)
     async function askAura(promptText) {
         auraState = 'thinking';
         setStatus("A.U.R.A. düşünüyor...");
@@ -294,7 +291,7 @@
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    model: "llama-3.1-8b-instant",
+                    model: "llama3-8b-8192", 
                     messages: [
                         {
                             role: "system",
@@ -306,21 +303,33 @@
             });
 
             const data = await response.json();
+            
+            if (!response.ok) {
+                const errorMsg = data.error?.message || "Bilinmeyen API Hatası";
+                auraState = 'idle';
+                setStatus("HATA: " + errorMsg);
+                document.getElementById("auraText").innerText = "Sistem Hatası: " + errorMsg;
+                console.error("Groq Detaylı Hata:", data);
+                return;
+            }
+
             if (data.choices && data.choices[0]) {
                 const reply = data.choices[0].message.content;
                 document.getElementById("auraText").innerText = reply;
                 speak(reply);
             } else {
                 auraState = 'idle';
-                setStatus("API Yanıt Verme Hatası");
+                setStatus("Geçersiz API Yanıtı Geldi");
             }
         } catch (error) {
             auraState = 'idle';
-            setStatus("Bağlantı Hatası");
+            setStatus("İnternet veya Bağlantı Hatası");
+            document.getElementById("auraText").innerText = error.message;
             console.error(error);
         }
     }
 
+    // EKSİK OLAN KONUŞMA FONKSİYONU EKLENDİ
     function speak(text) {
         auraState = 'speaking';
         setStatus("A.U.R.A. konuşuyor...");
@@ -346,4 +355,3 @@
 
 </body>
 </html>
-
