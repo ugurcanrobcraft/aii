@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A.U.R.A. - Virtual AI</title>
+    <title>A.U.R.A. - Wake Word AI</title>
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -90,7 +90,7 @@
         const canvas = document.getElementById('auraCanvas');
         const ctx = canvas.getContext('2d');
         let time = 0;
-        let auraState = 'off'; // off, sleeping, listening, thinking, speaking
+        let auraState = 'off'; 
         let isAwake = false; 
 
         const particles = [];
@@ -112,30 +112,25 @@
             let timeSpeed = 0.01;
 
             if (auraState === 'sleeping' || auraState === 'off') {
-                // 🔵 Beklerken: Yavaş dönen sakin mavi parçacıklar
                 targetColor = { r: 0, g: 243, b: 255 };
                 scale = 1 + Math.sin(time * 2) * 0.02; 
                 timeSpeed = 0.01;
             } else if (auraState === 'listening') {
-                // 🔴 Dinlerken: Hızlanan ve titreşen kırmızı/pembe
                 targetColor = { r: 255, g: 0, b: 85 }; 
-                scale = 1.1 + (Math.random() * 0.06); // Titreşim efekti
+                scale = 1.1 + (Math.random() * 0.06); 
                 timeSpeed = 0.04;
             } else if (auraState === 'thinking') {
-                // 🟠 Düşünürken: Dalgalanan turuncu/sarı
                 targetColor = { r: 255, g: 170, b: 0 }; 
-                scale = 1.05 + Math.sin(time * 5) * 0.08; // Dalgalanma
+                scale = 1.05 + Math.sin(time * 5) * 0.08; 
                 timeSpeed = 0.02;
             } else if (auraState === 'speaking') {
-                // 🔵 Konuşurken: Ses frekansı gibi hızlı büyüyüp küçülen parlak mavi
                 targetColor = { r: 0, g: 150, b: 255 }; 
-                scale = 1.15 + Math.sin(time * 18) * 0.15; // Çok hızlı frekans
+                scale = 1.15 + Math.sin(time * 18) * 0.15; 
                 timeSpeed = 0.03;
             }
 
             time += timeSpeed;
 
-            // Renk geçişini yumuşat
             currentColor.r += (targetColor.r - currentColor.r) * 0.1;
             currentColor.g += (targetColor.g - currentColor.g) * 0.1;
             currentColor.b += (targetColor.b - currentColor.b) * 0.1;
@@ -176,7 +171,7 @@
             if (SpeechRecognition) {
                 recognition = new SpeechRecognition();
                 recognition.lang = 'tr-TR';
-                recognition.continuous = true; // Sürekli dinleme açık
+                recognition.continuous = true; 
                 recognition.interimResults = false;
 
                 recognition.onresult = (event) => {
@@ -184,18 +179,15 @@
                     const lowerText = text.toLowerCase();
                     
                     if (!isAwake) {
-                        // Sadece uyandırma kelimesini bekliyor
                         if (lowerText.match(/hey\s*(aura|avra|ora|avura|ağra)/i)) {
                             wakeUp(text);
                         }
                     } else {
-                        // Sistem uyanık, söylenen her şeyi komut kabul et
                         document.getElementById("userText").innerText = text;
                         askAura(text);
                     }
                 };
 
-                // Mikrofonda sessizlik olunca veya kapanınca otomatik tekrar başlat
                 recognition.onend = () => {
                     if (auraState !== 'speaking' && systemStarted) {
                         try { recognition.start(); } catch(e) {}
@@ -206,7 +198,6 @@
             }
         });
 
-        // İlk tıklama - Tarayıcı güvenliğini aşmak için gerekli
         function manualWakeUp() {
             if (!systemStarted) {
                 systemStarted = true;
@@ -214,7 +205,6 @@
                 goToSleep();
                 return;
             }
-            // Zaten açıksa, manuel olarak uyandır
             wakeUp();
         }
 
@@ -223,7 +213,6 @@
             auraState = 'listening';
             updateStatus("Sizi Dinliyor...", "#ff0055");
             
-            // Eğer "Hey Aura hava nasıl?" dediyse, cümlenin devamını anında al
             const command = fullText.replace(/hey\s*(aura|avra|ora|avura|ağra)/i, '').trim();
             if (command.length > 2) {
                 document.getElementById("userText").innerText = command;
@@ -246,33 +235,29 @@
             document.getElementById("orbContainer").style.borderColor = color;
         }
 
-        // --- 3. YAPAY ZEKA BAĞLANTISI ---
+        // --- 3. YAPAY ZEKA BAĞLANTISI (GÜNCELLENDİ - GET METODU) ---
         async function askAura(promptText) {
             auraState = 'thinking';
-            isAwake = false; // Düşünürken ekstra komut alma
+            isAwake = false; 
             updateStatus("Düşünüyor...", "#ffaa00");
 
             try {
-                const response = await fetch("https://text.pollinations.ai/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        messages: [
-                            { role: "system", content: "Sen A.U.R.A adında karizmatik bir yapay zeka asistanısın. Kısa, samimi ve tek paragraf Türkçe cevaplar ver." },
-                            { role: "user", content: promptText }
-                        ]
-                    })
-                });
+                // Güvenlik engeline takılmamak için URL üzerinden (GET) gönderiyoruz.
+                const systemPrompt = "Sen A.U.R.A adında karizmatik bir yapay zeka asistanısın. Sadece Türkçe konuş. Kısa, samimi ve tek paragraf cevaplar ver. Kullanıcının sorusu: ";
+                const fullUrl = "https://text.pollinations.ai/" + encodeURIComponent(systemPrompt + promptText);
+
+                const response = await fetch(fullUrl);
 
                 if (response.ok) {
                     const reply = await response.text();
                     document.getElementById("auraText").innerText = reply;
                     speak(reply);
                 } else {
-                    throw new Error("API Hatası");
+                    throw new Error("Sunucu yanıt vermedi");
                 }
             } catch (error) {
-                document.getElementById("auraText").innerText = "Bağlantı hatası oluştu.";
+                console.error("Hata Detayı:", error);
+                document.getElementById("auraText").innerText = "Bağlantı hatası oluştu. Lütfen tekrar deneyin.";
                 goToSleep();
             }
         }
@@ -282,7 +267,6 @@
             auraState = 'speaking';
             updateStatus("Konuşuyor...", "#0096ff");
             
-            // Kendi sesini duyup döngüye girmemesi için dinlemeyi durdur
             recognition.stop(); 
             window.speechSynthesis.cancel(); 
 
@@ -292,7 +276,7 @@
             
             utterance.onend = () => {
                 goToSleep();
-                try { recognition.start(); } catch(e) {} // Konuşma bitince dinlemeyi geri aç
+                try { recognition.start(); } catch(e) {} 
             };
             
             utterance.onerror = () => {
