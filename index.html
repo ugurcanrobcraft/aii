@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A.U.R.A. - Wake Word AI</title>
+    <title>A.U.R.A. - Virtual Assistant</title>
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -235,32 +235,69 @@
             document.getElementById("orbContainer").style.borderColor = color;
         }
 
-        // --- 3. YAPAY ZEKA BAĞLANTISI (GÜNCELLENDİ - GET METODU) ---
-        async function askAura(promptText) {
-            auraState = 'thinking';
-            isAwake = false; 
-            updateStatus("Düşünüyor...", "#ffaa00");
+        // --- YAPAY ZEKA BAĞLANTISI ---
+async function askAura(promptText) {
+    if (!promptText || !promptText.trim()) {
+        goToSleep();
+        return;
+    }
 
-            try {
-                // Güvenlik engeline takılmamak için URL üzerinden (GET) gönderiyoruz.
-                const systemPrompt = "Sen A.U.R.A adında karizmatik bir yapay zeka asistanısın. Sadece Türkçe konuş. Kısa, samimi ve tek paragraf cevaplar ver. Kullanıcının sorusu: ";
-                const fullUrl = "https://text.pollinations.ai/" + encodeURIComponent(systemPrompt + promptText);
+    auraState = 'thinking';
+    isAwake = false;
+    updateStatus("Düşünüyor...", "#ffaa00");
 
-                const response = await fetch(fullUrl);
+    const systemPrompt =
+        "Sen A.U.R.A adında karizmatik bir yapay zeka asistanısın. " +
+        "Sadece Türkçe konuş. " +
+        "Kısa, samimi ve anlaşılır cevaplar ver. " +
+        "Gereksiz uzun cevaplar verme.";
 
-                if (response.ok) {
-                    const reply = await response.text();
-                    document.getElementById("auraText").innerText = reply;
-                    speak(reply);
-                } else {
-                    throw new Error("Sunucu yanıt vermedi");
-                }
-            } catch (error) {
-                console.error("Hata Detayı:", error);
-                document.getElementById("auraText").innerText = "Bağlantı hatası oluştu. Lütfen tekrar deneyin.";
-                goToSleep();
-            }
+    try {
+        const url =
+            "https://text.pollinations.ai/" +
+            encodeURIComponent(promptText.trim()) +
+            "?model=openai" +
+            "&system=" + encodeURIComponent(systemPrompt) +
+            "&private=true";
+
+        console.log("AI isteği gönderiliyor:", url);
+
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Accept": "text/plain"
+            },
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                "HTTP " + response.status + " - " + response.statusText
+            );
         }
+
+        const reply = (await response.text()).trim();
+
+        if (!reply) {
+            throw new Error("AI boş cevap gönderdi.");
+        }
+
+        console.log("AI cevabı:", reply);
+
+        document.getElementById("auraText").innerText = reply;
+
+        speak(reply);
+
+    } catch (error) {
+        console.error("A.U.R.A AI HATASI:", error);
+
+        document.getElementById("auraText").innerText =
+            "AI bağlantısı kurulamadı. Birkaç saniye sonra tekrar deneyin.";
+
+        auraState = 'sleeping';
+        goToSleep();
+    }
+}
 
         // --- 4. SESLİ OKUMA ---
         function speak(text) {
